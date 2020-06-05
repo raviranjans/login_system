@@ -4,7 +4,11 @@ const bcrypt = require('bcryptjs');
 const passport = require('passport');
 // Load User model
 const User = require('../models/User');
+const Table = require('../models/Table');
 const { forwardAuthenticated } = require('../config/auth');
+
+
+
 
 // Login Page
 router.get('/login', forwardAuthenticated, (req, res) => res.render('login'));
@@ -25,19 +29,7 @@ router.post('/register', (req, res) => {
       errors.push({ msg: 'Passwords do not match' });
     }
   
-    if (password.length < 6) {
-      errors.push({ msg: 'Password must be at least 6 characters' });
-    }
-  
-    if (errors.length > 0) {
-      res.render('register', {
-        errors,
-        name,
-        email,
-        password,
-        password2
-      });
-    } else {
+    else {
       User.findOne({ email: email }).then(user => {
         if (user) {
           errors.push({ msg: 'Email already exists' });
@@ -84,12 +76,63 @@ router.post('/register', (req, res) => {
       failureFlash: true
     })(req, res, next);
   });
+
   
   // Logout
   router.get('/logout', (req, res) => {
     req.logout();
     req.flash('success_msg', 'You are logged out');
     res.redirect('/users/login');
+});
+
+
+router.get('/dashboard', forwardAuthenticated, (req, res) => res.render('dashboard'));
+
+router.post('/dashboard', (req, res) => {
+  const { name, email, phone, date, time } = req.body;
+    let errors = [];
+  
+    if (!name || !email || !phone || !time) {
+      errors.push({ msg: 'Please enter all fields' });
+    }
+  
+  
+    else {
+      Table.findOne({ time: time, date: date}).then(user => {
+        if (user) {
+          return res.json({
+            success: true,
+            message: "Sorry at that time table is booked select different time"
+          
+          });
+        } else {
+          const newTable = new Table({
+            name,
+            email,
+            phone,
+            date,
+            time
+          });
+          bcrypt.genSalt(10, (err, salt) => {
+            bcrypt.hash(newTable.phone, salt, (err, hash) => {
+              if (err) throw err;
+              newTable.phone = hash;
+              newTable
+                .save()
+                .then(user => {
+                  req.flash(
+                    'success_msg',
+                    'You are now registered'
+                  );
+                  res.redirect('/booked');
+                })
+                .catch(err => console.log(err));
+            });
+          });
+                  
+        }
+      });
+    }
 });
 
 module.exports = router;

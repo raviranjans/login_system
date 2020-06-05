@@ -12,4 +12,10 @@ router.get('/dashboard', ensureAuthenticated, (req, res) =>
   })
 );
 
+router.get('/booked', ensureAuthenticated, (req, res) =>
+  res.render('booked', {
+    user: req.user
+  })
+);
+
 module.exports = router;
